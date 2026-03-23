@@ -48,11 +48,13 @@ function collectDirectLocations(serverChildren) {
 export function analyzeLocations(ast) {
   const results = []
 
-  function walk(nodes) {
+  function walk(nodes, sourceFile = null) {
+    const fromInclude = sourceFile !== null
     for (const n of nodes) {
+      if (n.type === 'include' && n.resolvedAst) { walk(n.resolvedAst, n.pattern); continue }
       if (n.type !== 'block') continue
       if (n.name === 'http' || n.name === 'stream') {
-        walk(n.children)
+        walk(n.children, sourceFile)
       } else if (n.name === 'server') {
         const serverNames = n.children
           .filter(c => c.type === 'directive' && c.name === 'server_name')
@@ -75,7 +77,11 @@ export function analyzeLocations(ast) {
           }
         }
 
-        results.push({ serverNames, listens, locations })
+        // Extract server-level return/rewrite for redirect-only servers
+        const returnDir = n.children.find(c => c.type === 'directive' && c.name === 'return')
+        const serverReturn = returnDir ? returnDir.values.join(' ') : null
+
+        results.push({ serverNames, listens, locations, fromInclude, sourceFile, serverReturn, line: n.line ?? null })
       }
     }
   }

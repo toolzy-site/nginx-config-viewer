@@ -4,23 +4,36 @@
     v-if="node.type === 'comment'"
     class="tree-node tree-comment"
     :style="{ paddingLeft: indent }"
-    :class="{ 'has-line': node.line }"
-    @click="() => jumpToLine && node.line && jumpToLine(node.line)"
+    :class="{ 'has-line': node.line && canJump }"
+    @click="() => canJump && node.line && jumpToLine(node.line)"
   >
     <span class="comment-text"># {{ node.text }}</span>
   </div>
 
   <!-- Include -->
-  <div
-    v-else-if="node.type === 'include'"
-    class="tree-node tree-include"
-    :style="{ paddingLeft: indent }"
-    :class="{ 'has-line': node.line }"
-    @click="() => jumpToLine && node.line && jumpToLine(node.line)"
-  >
-    <span class="include-icon">📎</span>
-    <span class="include-kw">include</span>
-    <span class="include-pattern">{{ node.pattern }}</span>
+  <div v-else-if="node.type === 'include'" class="tree-include-wrap">
+    <div
+      class="tree-node tree-include"
+      :style="{ paddingLeft: indent }"
+      :class="{ 'has-line': node.line, 'is-resolved': node.resolvedAst }"
+      @click="handleIncludeClick"
+    >
+      <span v-if="node.resolvedAst" class="toggle-icon">{{ includeOpen ? '▾' : '▸' }}</span>
+      <span v-else class="toggle-icon toggle-icon-placeholder"></span>
+      <span class="include-icon">📎</span>
+      <span class="include-kw">include</span>
+      <span class="include-pattern">{{ node.pattern }}</span>
+      <span v-if="node.resolvedAst" class="include-resolved-badge">resolved</span>
+    </div>
+    <div v-if="node.resolvedAst && includeOpen" class="block-children">
+      <TreeNode
+        v-for="(child, i) in node.resolvedAst"
+        :key="i"
+        :node="child"
+        :depth="depth + 1"
+        :jump-disabled="true"
+      />
+    </div>
   </div>
 
   <!-- Directive -->
@@ -28,8 +41,8 @@
     v-else-if="node.type === 'directive'"
     class="tree-node tree-directive"
     :style="{ paddingLeft: indent }"
-    :class="{ 'has-line': node.line }"
-    @click="() => jumpToLine && node.line && jumpToLine(node.line)"
+    :class="{ 'has-line': node.line && canJump }"
+    @click="() => canJump && node.line && jumpToLine(node.line)"
   >
     <span class="directive-name">{{ node.name }}</span>
     <span v-if="node.values.length" class="directive-value">{{ node.values.join(' ') }}</span>
@@ -50,6 +63,7 @@
         :key="i"
         :node="child"
         :depth="depth + 1"
+        :jump-disabled="jumpDisabled"
       />
     </div>
   </div>
@@ -59,20 +73,29 @@
 import { ref, computed, inject } from 'vue'
 
 const props = defineProps({
-  node:  { type: Object, required: true },
-  depth: { type: Number, default: 0 },
+  node:         { type: Object,  required: true },
+  depth:        { type: Number,  default: 0 },
+  jumpDisabled: { type: Boolean, default: false },
 })
 
 // Blocks start open at depth 0, closed at deeper levels
 const open = ref(props.depth < 2)
+const includeOpen = ref(props.depth < 1)
 
 const indent = computed(() => `${props.depth * 20}px`)
 
 const jumpToLine = inject('jumpToLine', null)
 
+const canJump = computed(() => !props.jumpDisabled && !!jumpToLine)
+
 function handleBlockClick() {
   open.value = !open.value
-  if (jumpToLine && props.node.line) jumpToLine(props.node.line)
+  if (canJump.value && props.node.line) jumpToLine(props.node.line)
+}
+
+function handleIncludeClick() {
+  if (props.node.resolvedAst) includeOpen.value = !includeOpen.value
+  else if (canJump.value && props.node.line) jumpToLine(props.node.line)
 }
 </script>
 
@@ -104,12 +127,22 @@ function handleBlockClick() {
 }
 
 /* Include */
-.tree-include {
-  gap: 6px;
-}
+.tree-include-wrap { display: flex; flex-direction: column; }
+.tree-include { gap: 6px; }
+.tree-include.is-resolved { cursor: pointer; }
 .include-icon { font-size: 12px; }
 .include-kw   { color: #f59e0b; font-weight: 600; }
 .include-pattern { color: #fcd34d; }
+.include-resolved-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4ade80;
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.toggle-icon-placeholder { width: 12px; display: inline-block; }
 
 /* Directive */
 .directive-name  { color: #60a5fa; font-weight: 600; }

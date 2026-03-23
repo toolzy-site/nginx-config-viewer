@@ -95,7 +95,24 @@
           </div>
         </div>
 
-        <div class="input-editor-wrap">
+        <!-- Include file tabs -->
+        <div v-if="includeKeys.length" class="file-tabs">
+          <button
+            class="file-tab"
+            :class="{ active: activeInputTab === 'main' }"
+            @click="activeInputTab = 'main'"
+          >nginx.conf</button>
+          <button
+            v-for="key in includeKeys"
+            :key="key"
+            class="file-tab"
+            :class="{ active: activeInputTab === key }"
+            @click="activeInputTab = key"
+            :title="key"
+          >{{ fileTabName(key) }}</button>
+        </div>
+
+        <div v-show="activeInputTab === 'main'" class="input-editor-wrap">
           <div class="line-gutter" ref="lineGutterRef">
             <div v-for="n in lineCount" :key="n" class="ln">{{ n }}</div>
           </div>
@@ -106,8 +123,26 @@
             :placeholder="t('input_placeholder')"
             spellcheck="false"
             @scroll="onInputScroll"
+            @keydown.tab.prevent="onTabKey"
           ></textarea>
         </div>
+
+        <!-- Include file viewer (read-only) -->
+        <div v-if="activeInputTab !== 'main'" class="input-editor-wrap include-readonly">
+          <div class="include-path-bar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="include-path-text">{{ activeInputTab }}</span>
+            <span class="readonly-badge">read-only</span>
+          </div>
+          <textarea
+            ref="includeViewerRef"
+            class="input-area"
+            readonly
+            :value="includesMap[activeInputTab]"
+            spellcheck="false"
+          ></textarea>
+        </div>
+
         <div class="input-footer">
           <button class="btn-primary" @click="run">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -115,6 +150,35 @@
             </svg>
             Parse &amp; Format
           </button>
+          <button
+            v-if="vscode"
+            class="btn-save"
+            :class="saveState"
+            @click="saveFile"
+            :disabled="saveState === 'saving'"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            {{ saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved!' : saveState === 'error' ? 'Error' : 'Save' }}
+          </button>
+          <div class="autoparse-wrap">
+            <button
+              class="btn-autoparse"
+              :class="{ active: autoparse }"
+              @click="autoparse = !autoparse"
+            >
+              <span class="autoparse-dot"></span>
+              Auto
+            </button>
+            <div class="autoparse-tooltip">
+              <strong>Auto Parse</strong>
+              <span>입력 후 0.5초가 지나면 자동으로 파싱합니다.</span>
+              <span>OFF 상태에서는 Parse &amp; Format 버튼을 직접 눌러야 합니다.</span>
+            </div>
+          </div>
           <span v-if="parsed && !error" class="stat-text">{{ t('stat_nodes', { n: nodeCount }) }}</span>
         </div>
       </div>
@@ -234,6 +298,7 @@ import LocationAnalyzer from './components/LocationAnalyzer.vue'
 import DiagramView from './components/DiagramView.vue'
 
 const { t } = useI18n()
+const vscode = window.__vscode_webview__ ? window.acquireVsCodeApi() : null
 const isMobile = ref(false)
 const showHelp = ref(false)
 const sampleMenuOpen = ref(false)
@@ -241,6 +306,65 @@ const sampleWrapRef = ref(null)
 const inputRef = ref(null)
 const lineGutterRef = ref(null)
 const lineCount = computed(() => input.value ? input.value.split('\n').length : 1)
+
+// ── Include file tabs ─────────────────────────────────────────
+const includesMap = window.__nginx_includes__ ?? {}
+const includeKeys = computed(() => Object.keys(includesMap))
+const activeInputTab = ref('main')
+const includeViewerRef = ref(null)
+
+function fileTabName(key) {
+  return key.split('/').pop() || key
+}
+
+function jumpToFileAndLine(sourceFile, line) {
+  if (!sourceFile) {
+    jumpToLine(line)
+    return
+  }
+  activeInputTab.value = sourceFile
+  nextTick(() => {
+    const ta = includeViewerRef.value
+    if (!ta || !line) return
+    const content = includesMap[sourceFile] ?? ''
+    const lines = content.split('\n')
+    // jumpToLine과 동일한 mirror div 방식으로 픽셀 정확 스크롤
+    const style = window.getComputedStyle(ta)
+    const mirror = document.createElement('div')
+    Object.assign(mirror.style, {
+      position: 'fixed',
+      top: '-9999px',
+      left: '-9999px',
+      width: ta.clientWidth + 'px',
+      fontFamily: style.fontFamily,
+      fontSize: style.fontSize,
+      lineHeight: style.lineHeight,
+      paddingTop: style.paddingTop,
+      paddingBottom: style.paddingBottom,
+      paddingLeft: style.paddingLeft,
+      paddingRight: style.paddingRight,
+      boxSizing: style.boxSizing,
+      whiteSpace: 'pre-wrap',
+      wordBreak: 'break-word',
+      overflowWrap: 'break-word',
+      visibility: 'hidden',
+    })
+    mirror.textContent = lines.slice(0, line - 1).join('\n') + (line > 1 ? '\n' : '')
+    document.body.appendChild(mirror)
+    const lineTop = mirror.scrollHeight
+    document.body.removeChild(mirror)
+    ta.scrollTop = Math.max(0, lineTop - ta.clientHeight / 3)
+    // readonly textarea도 setSelectionRange 지원
+    let offset = 0
+    for (let i = 0; i < line - 1 && i < lines.length; i++) {
+      offset += lines[i].length + 1
+    }
+    const endOffset = offset + (lines[line - 1]?.length || 0)
+    ta.focus()
+    ta.setSelectionRange(offset, endOffset)
+  })
+}
+provide('jumpToFileAndLine', jumpToFileAndLine)
 
 function onInputScroll() {
   if (lineGutterRef.value && inputRef.value) {
@@ -365,11 +489,21 @@ const nodeCount = computed(() => {
   return n
 })
 
+// ── Auto-parse ────────────────────────────────────────────────
+const autoparse = ref(false)
+let autparseTimer = null
+
+watch(input, () => {
+  if (!autoparse.value) return
+  clearTimeout(autparseTimer)
+  autparseTimer = setTimeout(() => run(), 500)
+})
+
 function run() {
   error.value = null
   parsed.value = false
 
-  const result = parse(input.value)
+  const result = parse(input.value, window.__nginx_includes__ ?? {})
   if (!result.ok) {
     error.value = result.error
     return
@@ -385,6 +519,31 @@ function clearInput() {
   parsed.value = false
   error.value = null
   ast.value = []
+}
+
+// ── File Save ─────────────────────────────────────────────────
+const saveState = ref('idle') // 'idle' | 'saving' | 'saved' | 'error'
+
+function saveFile() {
+  if (!vscode) return
+  saveState.value = 'saving'
+  vscode.postMessage({ command: 'save', content: input.value })
+}
+
+// ── Tab key insertion ─────────────────────────────────────────
+function onTabKey(e) {
+  const el = e.target
+  const start = el.selectionStart
+  const end = el.selectionEnd
+  const indent = indentStr.value
+
+  if (start === end) {
+    document.execCommand('insertText', false, indent)
+  } else {
+    const selected = input.value.slice(start, end)
+    const indented = selected.split('\n').map(line => indent + line).join('\n')
+    document.execCommand('insertText', false, indented)
+  }
 }
 
 async function copyFormatted() {
@@ -532,6 +691,10 @@ onMounted(() => {
   isMobile.value = !window.__vscode_webview__ && window.innerWidth < 768
 
   document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault()
+      saveFile()
+    }
     if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
       if (parsed.value && !error.value && activeTab.value === 'formatted') {
         e.preventDefault()
@@ -540,6 +703,19 @@ onMounted(() => {
     }
     if (e.key === 'Escape' && findOpen.value) closeFindBar()
   })
+
+  if (vscode) {
+    window.addEventListener('message', (e) => {
+      const msg = e.data
+      if (msg.command === 'saved') {
+        saveState.value = 'saved'
+        setTimeout(() => { saveState.value = 'idle' }, 2000)
+      } else if (msg.command === 'save-error') {
+        saveState.value = 'error'
+        setTimeout(() => { saveState.value = 'idle' }, 3000)
+      }
+    })
+  }
 
   document.addEventListener('click', (e) => {
     if (sampleWrapRef.value && !sampleWrapRef.value.contains(e.target)) {
@@ -745,6 +921,89 @@ onMounted(() => {
 }
 
 .btn-primary:hover { background: #15803d; }
+
+.btn-save {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn-save:hover { background: #2a2a3a; color: #d1d5db; }
+.btn-save.saved  { color: #4ade80; border-color: rgba(74,222,128,0.4); }
+.btn-save.error  { color: #f87171; border-color: rgba(248,113,113,0.4); }
+.btn-save:disabled { opacity: 0.5; cursor: default; }
+
+.autoparse-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.btn-autoparse {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #1e293b;
+  color: #6b7280;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.btn-autoparse:hover { background: #2a2a3a; color: #9ca3af; }
+.btn-autoparse.active { color: #4ade80; border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.06); }
+
+.autoparse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4b5563;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.btn-autoparse.active .autoparse-dot { background: #4ade80; }
+
+.autoparse-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1c1c26;
+  border: 1px solid #3a3a4f;
+  border-radius: 8px;
+  padding: 10px 13px;
+  width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 100;
+  flex-direction: column;
+  gap: 5px;
+}
+.autoparse-tooltip strong {
+  font-size: 11px;
+  font-weight: 700;
+  color: #d1d5db;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.autoparse-tooltip span {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+.autoparse-wrap:hover .autoparse-tooltip { display: flex; }
 
 .btn-ghost {
   background: none;
@@ -1122,6 +1381,81 @@ onMounted(() => {
 .modal-body strong {
   color: #d1d5db;
   font-weight: 600;
+}
+
+/* Include file tabs */
+.file-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 10px 0;
+  background: #16161d;
+  border-bottom: 1px solid #2a2a3a;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.file-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 500;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.file-tab:hover { color: #d1d5db; }
+.file-tab.active { color: #4ade80; border-bottom-color: #4ade80; }
+
+/* Include readonly viewer */
+.include-readonly {
+  flex-direction: column;
+}
+
+.include-path-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: #1a1a24;
+  border-bottom: 1px solid #2a2a3a;
+  color: #6b7280;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+}
+
+.include-path-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #9ca3af;
+}
+
+.readonly-badge {
+  font-size: 10px;
+  background: rgba(107, 114, 128, 0.15);
+  border: 1px solid #3a3a4f;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.include-readonly .input-area {
+  padding-left: 14px;
+  cursor: default;
+  color: #9ca3af;
+}
+
+.include-readonly .input-area:focus {
+  outline: none;
 }
 
 /* Sample dropdown */

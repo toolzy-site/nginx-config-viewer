@@ -142,7 +142,10 @@
             <div class="node-badges">
               <span v-if="srv.hasStatic"  class="nbadge">📁 static</span>
               <span v-if="srv.hasInclude" class="nbadge">📋 include</span>
-              <span v-if="!srv.connections.length" class="nbadge nbadge-standalone">standalone</span>
+              <span v-if="!srv.connections.length && !srv.serverReturn" class="nbadge nbadge-standalone">standalone</span>
+            </div>
+            <div v-if="srv.serverReturn" class="node-redirect" :title="srv.serverReturn">
+              ↪ {{ srv.serverReturn }}
             </div>
           </div>
 
@@ -150,7 +153,7 @@
           <div
             v-for="bk in layout.backends" :key="bk.id"
             class="dg-node bk-node"
-            :class="nodeClass(bk)"
+            :class="[nodeClass(bk), { 'is-alias': bk.type === 'alias', 'is-upstream': bk.isUpstream }]"
             :style="{ ...nodeStyle(bk), borderLeftColor: bk.color }"
             @click.stop="selectNode(bk.id)"
           >
@@ -164,13 +167,19 @@
                 {{ bk.isUpstream ? 'upstream' : 'backend' }}
               </template>
             </div>
-            <div class="bk-host">{{ bk.host }}</div>
+            <div
+              class="bk-host"
+              :class="{ 'bk-host-path': bk.type === 'alias' }"
+              :title="bk.type === 'alias' ? bk.host : undefined"
+            >{{ bk.type === 'alias' ? shortenPath(bk.host) : bk.host }}</div>
             <div v-if="bk.isUpstream" class="bk-upstream-toggle" @click.stop="toggleUpstream(bk.id)">
               <span>{{ bk.upstreamServers.length }} servers</span>
               <span class="toggle-icon">{{ expandedUpstreams.has(bk.id) ? '▲' : '▼' }}</span>
             </div>
             <div v-if="bk.isUpstream && expandedUpstreams.has(bk.id)" class="bk-members">
-              <div v-for="s in bk.upstreamServers" :key="s" class="bk-member">{{ s }}</div>
+              <div v-for="s in bk.upstreamServers" :key="s" class="bk-member">
+                <span class="bk-member-bullet">·</span>{{ s }}
+              </div>
             </div>
           </div>
 
@@ -192,6 +201,10 @@
               <div class="dp-ports">
                 <span v-for="p in selectedNode.node.listens" :key="p" class="port-tag" :class="{ ssl: isSslPort(p) }">{{ p }}</span>
               </div>
+            </div>
+            <div v-if="selectedNode.node.serverReturn" class="dp-section">
+              <div class="dp-section-title">Redirect</div>
+              <div class="dp-redirect-val">↪ {{ selectedNode.node.serverReturn }}</div>
             </div>
             <div v-if="selectedNode.node.locations && selectedNode.node.locations.length" class="dp-section">
               <div class="dp-section-title">Locations ({{ selectedNode.node.locations.length }})</div>
@@ -247,7 +260,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watchEffect } from 'vue'
 import { useI18n } from '../i18n/index.js'
 import { extractDiagramData, MODIFIER_LABELS } from '@nginx-viewer/core'
 
@@ -287,10 +300,11 @@ function isSslPort(p) {
 }
 
 function srvHeight(srv) {
-  const portsH  = 26
-  const namesH  = srv.serverNames.length * 18
-  const badgesH = (srv.hasStatic || srv.hasInclude) ? 20 : 0
-  return Math.max(70, portsH + namesH + badgesH + 16)
+  const portsH    = 26
+  const namesH    = srv.serverNames.length * 18
+  const badgesH   = (srv.hasStatic || srv.hasInclude) ? 20 : 0
+  const redirectH = srv.serverReturn ? 20 : 0
+  return Math.max(70, portsH + namesH + badgesH + redirectH + 16)
 }
 
 function bkHeight(bk) {
@@ -531,6 +545,19 @@ function toggleUpstream(id) {
   expandedUpstreams.has(id) ? expandedUpstreams.delete(id) : expandedUpstreams.add(id)
 }
 
+// ── Auto-expand upstreams on data change ─────────────────────
+watchEffect(() => {
+  for (const bk of data.value.backends) {
+    if (bk.isUpstream) expandedUpstreams.add(bk.id)
+  }
+})
+
+// ── Path display helper ──────────────────────────────────────
+function shortenPath(p) {
+  const parts = p.replace(/\/$/, '').split('/').filter(Boolean)
+  return parts.length > 2 ? '…/' + parts.slice(-2).join('/') : p
+}
+
 // ── Location modifier helpers ────────────────────────────────
 function modInfo(modifier) {
   return MODIFIER_LABELS[modifier] ?? { symbol: '∅', label: '접두사', color: '#60a5fa' }
@@ -764,6 +791,10 @@ function modInfo(modifier) {
   border-left: 3px solid;
 }
 
+.bk-node.is-alias {
+  border-left-style: dashed;
+}
+
 .bk-type {
   display: flex;
   align-items: center;
@@ -781,6 +812,13 @@ function modInfo(modifier) {
   word-break: break-all;
 }
 
+.bk-host-path {
+  word-break: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .bk-members {
   display: flex;
   flex-direction: column;
@@ -791,9 +829,19 @@ function modInfo(modifier) {
 }
 
 .bk-member {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 11px;
   font-family: 'JetBrains Mono', monospace;
-  color: #6b7280;
+  color: #9ca3af;
+}
+
+.bk-member-bullet {
+  color: #4b5563;
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* Detail panel */
@@ -941,6 +989,16 @@ function modInfo(modifier) {
   padding: 3px 0;
 }
 
+.dp-redirect-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+
 .dp-usedby-name {
   font-family: 'JetBrains Mono', monospace;
   color: #d1d5db;
@@ -955,6 +1013,20 @@ function modInfo(modifier) {
 .nbadge-standalone {
   color: #4b5563;
   font-style: italic;
+}
+
+.node-redirect {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Feature 6 — upstream toggle */

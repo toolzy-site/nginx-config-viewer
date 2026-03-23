@@ -22,6 +22,7 @@ export function extractDiagramData(ast) {
   // Pass 1: upstream 블록 수집
   function collectUpstreams(nodes) {
     for (const n of nodes) {
+      if (n.type === 'include' && n.resolvedAst) { collectUpstreams(n.resolvedAst); continue }
       if (n.type !== 'block') continue
       if (n.name === 'http' || n.name === 'stream') { collectUpstreams(n.children); continue }
       if (n.name === 'upstream') {
@@ -64,6 +65,8 @@ export function extractDiagramData(ast) {
       .map(c => c.values.join(' '))
     const isSSL = listens.some(l => /\bssl\b/.test(l) || /\b443\b/.test(l))
     const hasInclude = node.children.some(c => c.type === 'include')
+    const returnDir = node.children.find(c => c.type === 'directive' && c.name === 'return')
+    const serverReturn = returnDir ? returnDir.values.join(' ') : null
 
     const connMap  = new Map() // backendId → { backendId, paths[] }
     let hasStatic  = false
@@ -117,6 +120,7 @@ export function extractDiagramData(ast) {
       isSSL,
       hasStatic,
       hasInclude,
+      serverReturn,
       locations,
       connections: [...connMap.values()],
     })
@@ -124,6 +128,7 @@ export function extractDiagramData(ast) {
 
   function walk(nodes) {
     for (const n of nodes) {
+      if (n.type === 'include' && n.resolvedAst) { walk(n.resolvedAst); continue }
       if (n.type !== 'block') continue
       if (n.name === 'http' || n.name === 'stream') walk(n.children)
       else if (n.name === 'server') processServer(n)

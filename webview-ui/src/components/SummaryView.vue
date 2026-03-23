@@ -288,13 +288,14 @@
     </div>
 
     <!-- Virtual Hosts — one card per server -->
-    <div v-for="(vh, i) in summary.virtualHosts" :key="i" class="card">
+    <div v-for="(vh, i) in summary.virtualHosts" :key="i" class="card" :class="{ 'card-from-include': vh.fromInclude }">
       <div class="card-title vhost-header">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         <span class="vhost-name">{{ vh.serverName[0] || t('no_server_name') }}</span>
         <div class="port-badges">
           <span v-for="(p, pi) in vh.listen" :key="pi" class="port-badge" :class="{ 'port-badge-ssl': isSslPort(p) }">{{ p }}</span>
         </div>
+        <span v-if="vh.fromInclude" class="from-include-badge" :title="vh.sourceFile">📎 from include</span>
       </div>
       <div class="card-body">
         <!-- Basic info -->
@@ -512,6 +513,25 @@ const isEmpty = computed(() =>
   background: rgba(245, 158, 11, 0.1);
   border-color: rgba(245, 158, 11, 0.4);
   color: #f59e0b;
+}
+
+.from-include-badge {
+  margin-left: auto;
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: help;
+}
+
+.card-from-include {
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
 .card-body {

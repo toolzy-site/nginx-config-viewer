@@ -79,7 +79,7 @@ function tokenize(src) {
 // Parser
 // ─────────────────────────────────────────
 
-function parse(src) {
+function parse(src, includesMap = {}) {
   if (!src || !src.trim()) return { ok: true, ast: [] }
 
   let tokens
@@ -140,7 +140,13 @@ function parse(src) {
           const values = words.slice(1)
 
           if (name === 'include') {
-            nodes.push({ type: 'include', pattern: values.join(' '), line: nodeLine })
+            const pattern = values.join(' ')
+            const node = { type: 'include', pattern, line: nodeLine }
+            if (includesMap[pattern]) {
+              const resolved = parse(includesMap[pattern], includesMap)
+              if (resolved.ok) node.resolvedAst = resolved.ast
+            }
+            nodes.push(node)
           } else {
             nodes.push({ type: 'directive', name, values, line: nodeLine })
           }
@@ -277,7 +283,9 @@ function findAllDirectives(children, name) {
 
 function walkBlocks(nodes, name, cb) {
   for (const n of nodes) {
-    if (n.type === 'block') {
+    if (n.type === 'include' && n.resolvedAst) {
+      walkBlocks(n.resolvedAst, name, cb)
+    } else if (n.type === 'block') {
       if (n.name === name) cb(n)
       walkBlocks(n.children, name, cb)
     }
@@ -288,6 +296,7 @@ function walkAll(nodes, cb) {
   for (const n of nodes) {
     cb(n)
     if (n.type === 'block') walkAll(n.children, cb)
+    if (n.type === 'include' && n.resolvedAst) walkAll(n.resolvedAst, cb)
   }
 }
 
@@ -443,34 +452,49 @@ export function summarize(ast) {
     'limit_req', 'limit_conn', 'return', 'add_header',
   ]
 
-  // Virtual hosts (server blocks)
-  walkBlocks(ast, 'server', b => {
-    const listens = findAllDirectives(b.children, 'listen')
-    const serverNames = findAllDirectives(b.children, 'server_name')
+  // Virtual hosts (server blocks) — include 출처 추적
+  function walkServers(nodes, sourceFile) {
+    for (const n of nodes) {
+      if (n.type === 'include' && n.resolvedAst) {
+        walkServers(n.resolvedAst, n.pattern)
+        continue
+      }
+      if (n.type !== 'block') continue
+      if (n.name === 'http' || n.name === 'stream' || n.name === 'events') {
+        walkServers(n.children, sourceFile)
+      } else if (n.name === 'server') {
+        const b = n
+        const listens = findAllDirectives(b.children, 'listen')
+        const serverNames = findAllDirectives(b.children, 'server_name')
 
-    // SSL certs
-    const certs = findAllDirectives(b.children, 'ssl_certificate')
-    summary.ssl.push(...certs)
+        // SSL certs
+        const certs = findAllDirectives(b.children, 'ssl_certificate')
+        summary.ssl.push(...certs)
 
-    // Collect detail directives
-    const details = {}
-    for (const name of DETAIL_DIRECTIVES) {
-      const val = findDirective(b.children, name)
-      if (val !== null) details[name] = val
+        // Collect detail directives
+        const details = {}
+        for (const name of DETAIL_DIRECTIVES) {
+          const val = findDirective(b.children, name)
+          if (val !== null) details[name] = val
+        }
+
+        // Collect include patterns
+        const includes = b.children
+          .filter(c => c.type === 'include')
+          .map(c => c.pattern)
+
+        summary.virtualHosts.push({
+          listen: listens,
+          serverName: serverNames,
+          details,
+          includes,
+          fromInclude: sourceFile !== null,
+          sourceFile,
+        })
+      }
     }
-
-    // Collect include patterns
-    const includes = b.children
-      .filter(c => c.type === 'include')
-      .map(c => c.pattern)
-
-    summary.virtualHosts.push({
-      listen: listens,
-      serverName: serverNames,
-      details,
-      includes,
-    })
-  })
+  }
+  walkServers(ast, null)
 
   // Deduplicate ssl certs
   summary.ssl = [...new Set(summary.ssl)]
