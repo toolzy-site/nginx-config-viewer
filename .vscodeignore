@@ -5,3 +5,7 @@ node_modules/**
 webview-ui/**
 core/**
 images/*.gif
+.claude
+.serena
+.idea
+.gitignore
