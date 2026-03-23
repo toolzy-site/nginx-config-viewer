@@ -72,10 +72,39 @@ export default {
   // DiagramView
   diagram_empty: 'No server blocks found.',
   diagram_stat: '{s} server(s) · {b} backend(s)',
+  diagram_anim: 'Animation',
+  diagram_anim_tip_title: 'Flow Animation',
+  diagram_anim_tip_on: 'Shows a flowing dash animation on connection lines when hovering.',
+  diagram_anim_tip_off: 'Disable if you experience performance issues on low-spec devices.',
   col_vhosts: 'Virtual Hosts',
   col_backends: 'Backends',
   conn_tooltip_title: 'Connected locations ({n})',
   // MobileBlock
   mobile_message: 'This service is optimized<br>for desktop use.',
   mobile_submessage: 'Please access it from<br>a desktop or laptop browser.',
+
+  // App — autoparse tooltip
+  autoparse_tip_on:  'Automatically parses 0.5s after your last input.',
+  autoparse_tip_off: 'When OFF, click the Parse & Format button manually.',
+
+  // TreeNode
+  missing_semi: 'Missing semicolon',
+
+  // LocationAnalyzer — template titles
+  jump_to_line:     'Jump to line {n}',
+  loc_icon_proxy:   'proxy_pass — forwards to another server',
+  loc_icon_alias:   'alias — maps to a filesystem path',
+  include_readonly: 'Cannot edit an included file',
+
+  // LocationAnalyzer — server/port match reason
+  match_no_host:          'No host — using first server block',
+  match_exact:            'Exact match: {name}',
+  match_wildcard_prefix:  'Prefix wildcard: {name}',
+  match_wildcard_suffix:  'Suffix wildcard: {name}',
+  match_regex:            'Regex: {name}',
+  match_no_protocol:      'No protocol specified',
+  match_no_port:          'No port specified',
+
+  // DiagramView — modifier fallback
+  mod_prefix: 'Prefix',
 }

@@ -46,7 +46,7 @@
   >
     <span class="directive-name">{{ node.name }}</span>
     <span v-if="node.values.length" class="directive-value">{{ node.values.join(' ') }}</span>
-    <span v-if="node.missingSemi" class="missing-semi" title="세미콜론 누락">⚠</span>
+    <span v-if="node.missingSemi" class="missing-semi" :title="t('missing_semi')">⚠</span>
   </div>
 
   <!-- Block -->
@@ -71,6 +71,9 @@
 
 <script setup>
 import { ref, computed, inject } from 'vue'
+import { useI18n } from '../i18n/index.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   node:         { type: Object,  required: true },

@@ -72,10 +72,39 @@ export default {
   // DiagramView
   diagram_empty: '서버 블록이 없습니다.',
   diagram_stat: '{s}개 서버 · {b}개 백엔드',
+  diagram_anim: 'Animation',
+  diagram_anim_tip_title: 'Flow 애니메이션',
+  diagram_anim_tip_on: 'hover 시 연결선에 흐르는 대시 애니메이션을 표시합니다.',
+  diagram_anim_tip_off: '사양이 낮거나 성능 문제가 발생하면 비활성화하세요.',
   col_vhosts: 'Virtual Hosts',
   col_backends: 'Backends',
   conn_tooltip_title: '연결된 location ({n}개)',
   // MobileBlock
   mobile_message: '이 서비스는 PC 환경에서<br>최적화되어 있습니다.',
   mobile_submessage: '데스크탑 또는 노트북 브라우저에서<br>접속해 주세요.',
+
+  // App — autoparse tooltip
+  autoparse_tip_on:  '입력 후 0.5초가 지나면 자동으로 파싱합니다.',
+  autoparse_tip_off: 'OFF 상태에서는 Parse & Format 버튼을 직접 눌러야 합니다.',
+
+  // TreeNode
+  missing_semi: '세미콜론 누락',
+
+  // LocationAnalyzer — template titles
+  jump_to_line:     '줄 {n}로 이동',
+  loc_icon_proxy:   'proxy_pass — 다른 서버로 전달',
+  loc_icon_alias:   'alias — 파일시스템 경로로 대체',
+  include_readonly: 'include 파일은 수정할 수 없습니다',
+
+  // LocationAnalyzer — 서버/포트 매칭 reason
+  match_no_host:          '호스트 미지정 — 첫 번째 서버 블록 사용',
+  match_exact:            '완전 일치: {name}',
+  match_wildcard_prefix:  '앞 와일드카드: {name}',
+  match_wildcard_suffix:  '뒤 와일드카드: {name}',
+  match_regex:            '정규식: {name}',
+  match_no_protocol:      '프로토콜 미지정',
+  match_no_port:          '포트 미지정',
+
+  // DiagramView — modifier fallback
+  mod_prefix: '접두사',
 }

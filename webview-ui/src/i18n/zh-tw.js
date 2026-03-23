@@ -72,10 +72,39 @@ export default {
   // DiagramView
   diagram_empty: '沒有伺服器區塊。',
   diagram_stat: '{s} 個伺服器 · {b} 個後端',
+  diagram_anim: 'Animation',
+  diagram_anim_tip_title: '流動動畫',
+  diagram_anim_tip_on: '懸停時在連接線上顯示流動虛線動畫。',
+  diagram_anim_tip_off: '低效能裝置發生問題時請停用此功能。',
   col_vhosts: 'Virtual Hosts',
   col_backends: 'Backends',
   conn_tooltip_title: '關聯的 location（{n} 個）',
   // MobileBlock
   mobile_message: '此服務針對桌面環境<br>進行了最佳化。',
   mobile_submessage: '請使用桌面或筆記型電腦<br>的瀏覽器存取。',
+
+  // App — autoparse tooltip
+  autoparse_tip_on:  '輸入後0.5秒自動解析。',
+  autoparse_tip_off: '關閉時，需手動點擊 Parse & Format 按鈕。',
+
+  // TreeNode
+  missing_semi: '缺少分號',
+
+  // LocationAnalyzer — template titles
+  jump_to_line:     '跳轉到第 {n} 行',
+  loc_icon_proxy:   'proxy_pass — 轉發到其他伺服器',
+  loc_icon_alias:   'alias — 映射到檔案系統路徑',
+  include_readonly: '無法編輯 include 檔案',
+
+  // LocationAnalyzer — server/port match reason
+  match_no_host:          '未指定主機 — 使用第一個伺服器區塊',
+  match_exact:            '完全比對: {name}',
+  match_wildcard_prefix:  '前置萬用字元: {name}',
+  match_wildcard_suffix:  '後置萬用字元: {name}',
+  match_regex:            '正規表達式: {name}',
+  match_no_protocol:      '未指定協定',
+  match_no_port:          '未指定連接埠',
+
+  // DiagramView — modifier fallback
+  mod_prefix: '前置詞',
 }

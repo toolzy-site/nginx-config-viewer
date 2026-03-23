@@ -72,10 +72,39 @@ export default {
   // DiagramView
   diagram_empty: 'サーバーブロックがありません。',
   diagram_stat: '{s} サーバー · {b} バックエンド',
+  diagram_anim: 'Animation',
+  diagram_anim_tip_title: 'フローアニメーション',
+  diagram_anim_tip_on: 'ホバー時に接続線に流れるダッシュアニメーションを表示します。',
+  diagram_anim_tip_off: '低スペック端末で動作が重い場合は無効にしてください。',
   col_vhosts: 'Virtual Hosts',
   col_backends: 'Backends',
   conn_tooltip_title: '接続された location ({n} 件)',
   // MobileBlock
   mobile_message: 'このサービスはPC環境に<br>最適化されています。',
   mobile_submessage: 'デスクトップまたはノートPC<br>のブラウザでアクセスしてください。',
+
+  // App — autoparse tooltip
+  autoparse_tip_on:  '入力後0.5秒で自動的にパースします。',
+  autoparse_tip_off: 'OFFの場合、Parse & Formatボタンを手動で押してください。',
+
+  // TreeNode
+  missing_semi: 'セミコロンが必要です',
+
+  // LocationAnalyzer — template titles
+  jump_to_line:     '{n}行目に移動',
+  loc_icon_proxy:   'proxy_pass — 別サーバーに転送',
+  loc_icon_alias:   'alias — ファイルシステムパスに置換',
+  include_readonly: 'includeファイルは編集できません',
+
+  // LocationAnalyzer — server/port match reason
+  match_no_host:          'ホスト未指定 — 最初のサーバーブロックを使用',
+  match_exact:            '完全一致: {name}',
+  match_wildcard_prefix:  '前方ワイルドカード: {name}',
+  match_wildcard_suffix:  '後方ワイルドカード: {name}',
+  match_regex:            '正規表現: {name}',
+  match_no_protocol:      'プロトコル未指定',
+  match_no_port:          'ポート未指定',
+
+  // DiagramView — modifier fallback
+  mod_prefix: '接頭辞',
 }

@@ -72,10 +72,39 @@ export default {
   // DiagramView
   diagram_empty: '没有服务器块。',
   diagram_stat: '{s} 个服务器 · {b} 个后端',
+  diagram_anim: 'Animation',
+  diagram_anim_tip_title: '流动动画',
+  diagram_anim_tip_on: '悬停时在连接线上显示流动虚线动画。',
+  diagram_anim_tip_off: '低配置设备遇到性能问题时请禁用此功能。',
   col_vhosts: 'Virtual Hosts',
   col_backends: 'Backends',
   conn_tooltip_title: '关联的 location（{n} 个）',
   // MobileBlock
   mobile_message: '此服务针对桌面环境<br>进行了优化。',
   mobile_submessage: '请使用桌面或笔记本电脑<br>的浏览器访问。',
+
+  // App — autoparse tooltip
+  autoparse_tip_on:  '输入后0.5秒自动解析。',
+  autoparse_tip_off: '关闭时，需手动点击 Parse & Format 按钮。',
+
+  // TreeNode
+  missing_semi: '缺少分号',
+
+  // LocationAnalyzer — template titles
+  jump_to_line:     '跳转到第 {n} 行',
+  loc_icon_proxy:   'proxy_pass — 转发到其他服务器',
+  loc_icon_alias:   'alias — 映射到文件系统路径',
+  include_readonly: '无法编辑 include 文件',
+
+  // LocationAnalyzer — server/port match reason
+  match_no_host:          '未指定主机 — 使用第一个服务器块',
+  match_exact:            '精确匹配: {name}',
+  match_wildcard_prefix:  '前缀通配符: {name}',
+  match_wildcard_suffix:  '后缀通配符: {name}',
+  match_regex:            '正则表达式: {name}',
+  match_no_protocol:      '未指定协议',
+  match_no_port:          '未指定端口',
+
+  // DiagramView — modifier fallback
+  mod_prefix: '前缀',
 }

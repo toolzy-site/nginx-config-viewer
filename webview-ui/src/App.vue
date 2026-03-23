@@ -175,8 +175,8 @@
             </button>
             <div class="autoparse-tooltip">
               <strong>Auto Parse</strong>
-              <span>입력 후 0.5초가 지나면 자동으로 파싱합니다.</span>
-              <span>OFF 상태에서는 Parse &amp; Format 버튼을 직접 눌러야 합니다.</span>
+              <span>{{ t('autoparse_tip_on') }}</span>
+              <span>{{ t('autoparse_tip_off') }}</span>
             </div>
           </div>
           <span v-if="parsed && !error" class="stat-text">{{ t('stat_nodes', { n: nodeCount }) }}</span>

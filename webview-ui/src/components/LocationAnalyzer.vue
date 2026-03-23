@@ -79,7 +79,7 @@
         <span
           class="server-name"
           :class="{ 'server-name-jumpable': srv.line }"
-          :title="srv.line ? `줄 ${srv.line}로 이동` : ''"
+          :title="srv.line ? t('jump_to_line', { n: srv.line }) : ''"
           @click.stop="doJump(srv, srv.line)"
         >{{ srv.serverNames.join(', ') || '(unnamed)' }}</span>
         <span v-if="srv.listens.length" class="server-listen">{{ srv.listens.join(', ') }}</span>
@@ -118,10 +118,10 @@
               >{{ modInfo(loc.modifier).symbol || '∅' }}</span>
 
               <!-- Type icon -->
-              <span v-if="locHasDirective(loc.node, 'proxy_pass')" class="loc-type-icon loc-icon-proxy" title="proxy_pass — 다른 서버로 전달">
+              <span v-if="locHasDirective(loc.node, 'proxy_pass')" class="loc-type-icon loc-icon-proxy" :title="t('loc_icon_proxy')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
               </span>
-              <span v-else-if="locHasDirective(loc.node, 'alias')" class="loc-type-icon loc-icon-alias" title="alias — 파일시스템 경로로 대체">
+              <span v-else-if="locHasDirective(loc.node, 'alias')" class="loc-type-icon loc-icon-alias" :title="t('loc_icon_alias')">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               </span>
 
@@ -144,7 +144,7 @@
                 v-if="deleteNode && loc.node"
                 class="loc-delete-btn"
                 :class="{ 'is-disabled': srv.fromInclude }"
-                :title="srv.fromInclude ? 'include 파일은 수정할 수 없습니다' : ''"
+                :title="srv.fromInclude ? t('include_readonly') : ''"
                 :disabled="srv.fromInclude"
                 @click.stop="!srv.fromInclude && confirmDelete(loc.node, loc.path)"
               >{{ t('btn_delete') }}</button>
@@ -404,21 +404,21 @@ function parseFullUrl(raw) {
 }
 
 function matchServerName(serverNames, hostname) {
-  if (!hostname) return { match: true, reason: '호스트 미지정 — 첫 번째 서버 블록 사용' }
-  if (serverNames.includes(hostname)) return { match: true, reason: `완전 일치: ${hostname}` }
+  if (!hostname) return { match: true, reason: t('match_no_host') }
+  if (serverNames.includes(hostname)) return { match: true, reason: t('match_exact', { name: hostname }) }
   for (const name of serverNames) {
     if (name.startsWith('*.') && hostname.endsWith(name.slice(1)))
-      return { match: true, reason: `앞 와일드카드: ${name}` }
+      return { match: true, reason: t('match_wildcard_prefix', { name }) }
   }
   for (const name of serverNames) {
     if (name.endsWith('.*') && hostname.startsWith(name.slice(0, -2) + '.'))
-      return { match: true, reason: `뒤 와일드카드: ${name}` }
+      return { match: true, reason: t('match_wildcard_suffix', { name }) }
   }
   for (const name of serverNames) {
     if (name.startsWith('~')) {
       try {
         if (new RegExp(name.slice(1)).test(hostname))
-          return { match: true, reason: `정규식: ${name}` }
+          return { match: true, reason: t('match_regex', { name }) }
       } catch {}
     }
   }
@@ -426,7 +426,7 @@ function matchServerName(serverNames, hostname) {
 }
 
 function matchListen(listens, protocol, port) {
-  if (!protocol) return { match: true, reason: '프로토콜 미지정' }
+  if (!protocol) return { match: true, reason: t('match_no_protocol') }
   for (const listen of listens) {
     const parts = listen.split(/\s+/)
     const addrPart = parts[0]
@@ -453,7 +453,7 @@ function doGlobalTest() {
 
     const listenResult = parsed.hostname
       ? matchListen(srv.listens, parsed.protocol, parsed.port)
-      : { match: true, reason: '포트 미지정' }
+      : { match: true, reason: t('match_no_port') }
     if (!listenResult.match) continue
 
     const locResult = matchLocation(srv.locations, parsed.pathname || '/')

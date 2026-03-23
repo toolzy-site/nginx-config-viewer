@@ -27,6 +27,21 @@
           <span class="leg"><span class="leg-dot" style="background:#f59e0b"></span>HTTPS</span>
           <span class="leg"><span class="leg-dot" style="background:#4ade80"></span>HTTP</span>
           <span class="leg">📁 Static &nbsp;|&nbsp; 📋 include</span>
+          <div class="anim-toggle-wrap">
+            <button
+              class="btn-anim-toggle"
+              :class="{ active: flowAnim }"
+              @click="flowAnim = !flowAnim"
+            >
+              <span class="anim-toggle-dot"></span>
+              {{ t('diagram_anim') }}
+            </button>
+            <div class="anim-toggle-tooltip">
+              <strong>{{ t('diagram_anim_tip_title') }}</strong>
+              <span>{{ t('diagram_anim_tip_on') }}</span>
+              <span>{{ t('diagram_anim_tip_off') }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -79,6 +94,15 @@
                 :stroke-opacity="connHighlight(conn) === 'dimmed' ? 0.1 : 0.55"
                 :marker-end="`url(#darr-${conn.colorIdx})`"
               />
+              <path
+                v-if="isConnFlowing(conn)"
+                :d="conn.d"
+                fill="none"
+                :stroke="conn.color"
+                stroke-width="3"
+                stroke-opacity="0.65"
+                class="flow-path"
+              />
               <circle :cx="conn.mx" :cy="conn.my" r="11" fill="#16161d" :stroke="conn.color" stroke-width="1.5"
                 :stroke-opacity="connHighlight(conn) === 'dimmed' ? 0.15 : 0.7"/>
               <text
@@ -109,6 +133,15 @@
                 stroke-opacity="0.9"
                 :marker-end="`url(#darr-${conn.colorIdx})`"
               />
+              <path
+                v-if="isConnFlowing(conn)"
+                :d="conn.d"
+                fill="none"
+                :stroke="conn.color"
+                stroke-width="3.5"
+                stroke-opacity="0.8"
+                class="flow-path"
+              />
               <circle :cx="conn.mx" :cy="conn.my" r="11" fill="#16161d" :stroke="conn.color" stroke-width="1.5" stroke-opacity="0.9"/>
               <text
                 :x="conn.mx" :y="conn.my + 4"
@@ -128,6 +161,8 @@
             :class="[{ 'is-ssl': srv.isSSL, 'has-no-conn': !srv.connections.length }, nodeClass(srv)]"
             :style="nodeStyle(srv)"
             @click.stop="selectNode(srv.id)"
+            @mouseenter="hoveredId = srv.id"
+            @mouseleave="hoveredId = null"
           >
             <div class="node-ports">
               <span
@@ -156,6 +191,8 @@
             :class="[nodeClass(bk), { 'is-alias': bk.type === 'alias', 'is-upstream': bk.isUpstream }]"
             :style="{ ...nodeStyle(bk), borderLeftColor: bk.color }"
             @click.stop="selectNode(bk.id)"
+            @mouseenter="hoveredId = bk.id"
+            @mouseleave="hoveredId = null"
           >
             <div class="bk-type" :style="{ color: bk.color }">
               <template v-if="bk.type === 'alias'">
@@ -309,8 +346,11 @@ function srvHeight(srv) {
 
 function bkHeight(bk) {
   const expanded = expandedUpstreams.has(bk.id)
-  return 60 + (bk.isUpstream && bk.upstreamServers.length && expanded
-    ? bk.upstreamServers.length * 16 + 6
+  // upstream 노드는 type + host + toggle 3행 → 최소 76px 필요 (non-upstream 은 2행 → 60px)
+  const base = bk.isUpstream ? 78 : 60
+  return base + (bk.isUpstream && bk.upstreamServers.length && expanded
+    // bk-members 오버헤드(margin-top 4 + padding-top 4 + border 1) + 행당 16px + 행 간 gap 2px
+    ? bk.upstreamServers.length * 18 + 9
     : 0)
 }
 
@@ -464,7 +504,10 @@ function resetView() {
 }
 
 // ── Node selection / highlight ──────────────────────────────
-const selectedId = ref(null)
+const selectedId     = ref(null)
+const hoveredId      = ref(null)   // 노드 hover 중인 ID
+const hoveredConnKey = ref(null)   // connection hover 중인 key (serverId-backendId)
+const flowAnim       = ref(true)   // flow 애니메이션 ON/OFF
 
 const highlightState = computed(() => {
   const id = selectedId.value
@@ -528,6 +571,7 @@ const connTooltip = ref(null)
 
 function onConnEnter(conn, event) {
   connTooltip.value = { paths: conn.paths, x: event.clientX + 14, y: event.clientY + 8 }
+  hoveredConnKey.value = `${conn.serverId}-${conn.backendId}`
 }
 function onConnMove(event) {
   if (connTooltip.value) {
@@ -536,6 +580,7 @@ function onConnMove(event) {
 }
 function onConnLeave() {
   connTooltip.value = null
+  hoveredConnKey.value = null
 }
 
 // ── Upstream toggle ──────────────────────────────────────────
@@ -558,9 +603,19 @@ function shortenPath(p) {
   return parts.length > 2 ? '…/' + parts.slice(-2).join('/') : p
 }
 
+// ── Connection flow animation helper ────────────────────────
+function isConnFlowing(conn) {
+  if (!flowAnim.value) return false
+  const key = `${conn.serverId}-${conn.backendId}`
+  if (hoveredConnKey.value === key) return true
+  const hid = hoveredId.value
+  if (!hid) return false
+  return conn.serverId === hid || conn.backendId === hid
+}
+
 // ── Location modifier helpers ────────────────────────────────
 function modInfo(modifier) {
-  return MODIFIER_LABELS[modifier] ?? { symbol: '∅', label: '접두사', color: '#60a5fa' }
+  return MODIFIER_LABELS[modifier] ?? { symbol: '∅', label: t('mod_prefix'), color: '#60a5fa' }
 }
 </script>
 
@@ -1072,6 +1127,82 @@ function modInfo(modifier) {
 .mod-regex_ci        { background: rgba(250,204,21,0.07); color: #fde047; border: 1px solid rgba(250,204,21,0.2); }
 .mod-prefix          { background: rgba(96,165,250,0.1);  color: #60a5fa; border: 1px solid rgba(96,165,250,0.2); }
 .mod-named           { background: rgba(107,114,128,0.1); color: #9ca3af; border: 1px solid rgba(107,114,128,0.2); }
+
+/* Hover flow animation */
+@keyframes flow-dash {
+  to { stroke-dashoffset: -32; }
+}
+
+.flow-path {
+  stroke-dasharray: 12 20;
+  stroke-dashoffset: 0;
+  animation: flow-dash 0.7s linear infinite;
+  will-change: stroke-dashoffset;
+}
+
+/* Animation toggle button */
+.anim-toggle-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.btn-anim-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #1e293b;
+  color: #6b7280;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.btn-anim-toggle:hover { background: #2a2a3a; color: #9ca3af; }
+.btn-anim-toggle.active { color: #4ade80; border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.06); }
+
+.anim-toggle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4b5563;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.btn-anim-toggle.active .anim-toggle-dot { background: #4ade80; }
+
+.anim-toggle-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #1c1c26;
+  border: 1px solid #3a3a4f;
+  border-radius: 8px;
+  padding: 10px 13px;
+  width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 200;
+  flex-direction: column;
+  gap: 5px;
+}
+.anim-toggle-tooltip strong {
+  font-size: 11px;
+  font-weight: 700;
+  color: #d1d5db;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.anim-toggle-tooltip span {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+.anim-toggle-wrap:hover .anim-toggle-tooltip { display: flex; }
 </style>
 
 <style>
