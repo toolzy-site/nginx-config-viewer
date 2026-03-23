@@ -1,0 +1,60 @@
+{
+  "name": "nginx-viewer",
+  "displayName": "Nginx Config Viewer",
+  "description": "Visualize nginx.conf with tree, summary, location analyzer, and diagram.",
+  "version": "0.0.3",
+  "publisher": "toolzy",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/toolzy-site/nginx-config-viewer.git"
+  },
+  "categories": [
+    "Visualization",
+    "Formatters",
+    "Linters",
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "nginx-viewer.open",
+        "title": "%command.open.title%"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "nginx-viewer.open",
+          "when": "resourceExtname == .conf || resourceFilename =~ /nginx/",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "nginx-viewer.open",
+          "when": "resourceExtname == .conf || resourceFilename =~ /nginx/",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "workspaces": [
+    "webview-ui",
+    "core"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=webview-ui",
+    "build": "npm run build --workspace=webview-ui",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish --no-dependencies"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^2.24.0"
+  }
+}

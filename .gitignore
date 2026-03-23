@@ -1,0 +1,7 @@
+node_modules/
+dist/
+webview/
+*.vsix
+.idea/
+LOCALIZATION_PLAN.md
+VSCODE_EXTENSION_PROMPT.md
