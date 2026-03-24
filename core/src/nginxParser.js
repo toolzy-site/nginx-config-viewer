@@ -117,6 +117,9 @@ function parse(src, includesMap = {}) {
           words.push(t.value)
         }
 
+        // 인라인 주석 건너뛰기: proxy_pass 10.10.10.1 #주석 ;
+        while (peek().type === T.COMMENT) consume()
+
         const next = peek()
 
         if (next.type === T.LBRACE) {

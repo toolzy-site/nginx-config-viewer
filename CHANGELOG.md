@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.0.6] - 2026-03-24
+
+### Fixed
+- **Inline comment parsing error**: Directives with an inline comment before the semicolon (e.g. `proxy_pass 10.10.10.1 #comment ;`) now parse correctly instead of throwing an unexpected token error
+
+---
+
+### 수정
+- **인라인 주석 파싱 오류**: `proxy_pass 10.10.10.1 #주석 ;` 처럼 세미콜론 앞에 인라인 주석이 있는 지시어가 오류 없이 정상 파싱
+
+## [0.0.5] - 2026-03-23
+
+### Added
+- **Diagram flow animation**: Connection lines in the Diagram view now display a flowing dash animation when hovering over a node or connection. An **Animation** toggle button in the toolbar lets you enable or disable the effect
+
+---
+
+### 추가
+- **다이어그램 흐름 애니메이션**: 다이어그램 뷰에서 노드 또는 연결선을 hover 하면 연결선에 흐르는 대시 애니메이션이 표시됩니다. 툴바의 **Animation** 토글 버튼으로 효과를 켜고 끌 수 있습니다
+
 ## [0.0.4] - 2026-03-23
 
 ### Added
