@@ -30,13 +30,17 @@ function tokenize(src) {
       i++; continue
     }
 
-    // Comment
+    // Comment — only when '#' is preceded by whitespace, start of file, or a special char
+    // so that '#' inside URLs (e.g. proxy_pass http://host/path#fragment;) is not treated as a comment
     if (ch === '#') {
-      let j = i + 1
-      while (j < src.length && src[j] !== '\n') j++
-      tokens.push({ type: T.COMMENT, value: src.slice(i + 1, j).trim(), line })
-      i = j
-      continue
+      const prev = i > 0 ? src[i - 1] : '\n'
+      if (/[\s{};]/.test(prev) || i === 0) {
+        let j = i + 1
+        while (j < src.length && src[j] !== '\n') j++
+        tokens.push({ type: T.COMMENT, value: src.slice(i + 1, j).trim(), line })
+        i = j
+        continue
+      }
     }
 
     if (ch === '{') { tokens.push({ type: T.LBRACE, line }); i++; continue }
@@ -59,8 +63,16 @@ function tokenize(src) {
     }
 
     // Word (anything up to whitespace / special chars)
+    // '#' is allowed inside words (e.g. URL fragments) — comment detection above handles true comments
     let j = i
-    while (j < src.length && !/[\s{};"'#]/.test(src[j])) j++
+    while (j < src.length && !/[\s{};"']/.test(src[j])) {
+      // stop at '#' only if it would start a comment (preceded by whitespace/special or start of token)
+      if (src[j] === '#') {
+        const prevCh = j > 0 ? src[j - 1] : '\n'
+        if (/[\s{};]/.test(prevCh) || j === 0) break
+      }
+      j++
+    }
     if (j > i) {
       tokens.push({ type: T.WORD, value: src.slice(i, j), line })
       i = j

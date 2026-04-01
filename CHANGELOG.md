@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.7] - 2026-04-01
+
+### Fixed
+- **URL fragment parsing error**: URLs containing `#` (e.g. `proxy_pass https://host/path/#/route;`) were incorrectly split at the `#` character, which was treated as a comment. The lexer now only treats `#` as a comment when preceded by whitespace or special characters
+
+---
+
+### 수정
+- **URL 내 `#` 파싱 오류**: `proxy_pass https://host/path/#/route;` 처럼 URL에 `#`이 포함된 경우 주석으로 잘못 인식되어 파싱이 실패하던 버그 수정. `#` 앞에 공백이나 특수문자가 있을 때만 주석으로 처리하도록 lexer 개선
+
 ## [0.0.6] - 2026-03-24
 
 ### Fixed
