@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.0.8] - 2026-04-06
+
+### Fixed
+- Fixed webview reloading when switching tabs
+
+---
+
+### 수정
+- 탭 전환 시 웹뷰가 새로고침되던 현상 수정
+
 ## [0.0.7] - 2026-04-01
 
 ### Fixed

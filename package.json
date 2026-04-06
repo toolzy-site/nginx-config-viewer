@@ -2,7 +2,7 @@
   "name": "nginx-viewer",
   "displayName": "Nginx Config Viewer",
   "description": "Visualize nginx.conf with tree, summary, location analyzer, and diagram.",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "publisher": "toolzy",
   "engines": {
     "vscode": "^1.85.0"
